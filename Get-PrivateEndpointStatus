@@ -1,0 +1,33 @@
+#Connect-AzAccount
+
+function Get-PrivateEndpointStatus {
+    $PrivateLinkServiceIds = (Get-AzPrivateEndpoint).PrivateLinkServiceConnections.PrivateLinkServiceId
+    
+    $PrivateEndPointStatus = Get-AzWebApp | 
+        Select-Object ResourceGroup, Name, Id, Kind, Location, Type, LastModifiedTimeUtc, State, HostNameSslStates, @{
+            Name = "HasPrivateEndPoint"
+            Expression = {
+                if($PrivateLinkServiceIds.Contains($_.Id)) {
+                    "Yes"
+                }
+                else {
+                    "No"
+                }
+            }
+        }
+    
+    return $PrivateEndPointStatus
+}
+
+$Subscriptions = Get-AzSubscription
+
+$PrivateEndpointStatus = @()
+
+foreach($Subs in $Subscriptions)
+{
+    Set-AzContext -SubscriptionId $Subs.Id | Out-Null
+
+    $PrivateEndpointStatus += Get-PrivateEndpointStatus
+}
+
+$PrivateEndpointStatus
