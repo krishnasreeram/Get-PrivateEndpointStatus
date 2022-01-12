@@ -1,0 +1,26 @@
+function Get-AzSQLDbPricingTier {
+    Param($ResourceGroup, $ServerName)
+
+    $ServerSvcObjective = Get-AzSqlServerServiceObjective -ResourceGroupName $ResourceGroup -ServerName $ServerName
+
+    $Databases = Get-AzSqlDatabase -ResourceGroupName $ResourceGroup -ServerName $ServerName
+
+    $Databases | Select-Object ResourceGroupName, ServerName, DatabaseName, @{
+        Name = "PricingTier"
+        Expression = {
+            $Db = $_
+            $CurrentSvcObjective = $ServerSvcObjective | Where-Object {
+                $_.ServiceObjectiveName -eq $Db.CurrentServiceObjectiveName
+            }
+
+            $Edition = $CurrentSvcObjective.Edition
+            $SKUBased = if(-not $CurrentSvcObjective.Family){$CurrentSvcObjective.ServiceObjectiveName}
+            $Family = if($CurrentSvcObjective.Family) {$CurrentSvcObjective.Family + ", "}
+            $ServerLess = if($CurrentSvcObjective.ServiceObjectiveName.Contains("_S_")){"Serverless, "}
+            $Capacity = $CurrentSvcObjective.Capacity.ToString() + " " + $CurrentSvcObjective.CapacityUnit
+
+            $Edition + " " + $SKUBased + ": " + $ServerLess + $Family + $Capacity
+        }
+    }
+    
+}
